@@ -1,7 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 
-const char* ssid = "e-lab innovations";
+const char* ssid = "Dilna";
 const char* password = "PASSWORD";
 String recievedData;
 

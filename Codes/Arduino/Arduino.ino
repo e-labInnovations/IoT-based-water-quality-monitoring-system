@@ -3,10 +3,10 @@
 #include <LiquidCrystal.h>
 #define DS18B20 2
 
-#define phPin A1                                               // the pH meter Analog output is connected with the Arduino’s Analog
-#define turbidityPin A0                                          // the turbidity meter Analog output is connected with the Arduino’s Analog
-float volt, tempValue;
-float ntu;
+#define phPin A1                                                  // the pH meter Analog output is connected with the Arduino’s Analog
+#define turbidityPin A0                                       // the turbidity meter Analog output is connected with the Arduino’s Analog
+float tempValue, ntu;
+int turbMax = 740;                                               // Turbidity max.
 
 String sendData;                                              //For sending measured values to ESP8266 through serial communication
 
@@ -23,7 +23,7 @@ byte degree_symbol[8] = { 0x07, 0x05, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00 };
 void setup() {
   Serial.begin(9600);
   sensor.begin();
-  lcd.begin(16,2);               // initialize the lcd 
+  lcd.begin(16, 2);              // initialize the lcd
   lcd.createChar(0, degree_symbol);
 
   lcd.begin(16, 2);
@@ -63,17 +63,7 @@ void loop() {
   phValue = 3.5 * phValue;                              //convert the millivolt into pH value
 
   // ######################################################## TURBIDITY MEASUREMENT ########################################################
-  volt = 0;
-  for (int i = 0; i < 800; i++) {
-    volt += ((float)analogRead(turbidityPin) / 1023) * 5;
-  }
-  volt = volt / 470;
-  volt = round_to_dp(volt, 1);
-  if (volt < 2.5) {
-    ntu = 3000;
-  } else {
-    ntu = -1120.4 * square(volt) + 5742.3 * volt - 4353.8;
-  }
+ntu = toNTU( );
 
 
   // ######################################################## TEMPERATURE MEASUREMENT ########################################################
@@ -121,15 +111,23 @@ void loop() {
   delay(10);
 
   //############ SEND DATA TO ESP8266 ##############
-  sendData = "field1=" +String(tempValue) + "&field2=" + ntu + "&field3=" + phValue;
+  sendData = "field1=" + String(tempValue) + "&field2=" + ntu + "&field3=" + phValue;
   Serial.println(sendData);
   delay(2000);
 }
 
 
 // ##### FOR TURBIDITY MEASUREMENT #####
-float round_to_dp( float in_value, int decimal_place ) {
-  float multiplier = powf( 10.0f, decimal_place );
-  in_value = roundf( in_value * multiplier ) / multiplier;
-  return in_value;
+float toNTU( ) {
+  int sensorValue = (turbMax - analogRead(turbidityPin));
+//  float voltage = analogRead(A1) * (5.0 / 1024.0);
+
+  if (sensorValue > turbMax ) {
+    sensorValue = turbMax;
+  }
+  if (sensorValue < 0 ) {
+    sensorValue = 0;
+  }
+  float turbValue = map(sensorValue, 0, turbMax, 0, 500);
+  return turbValue;
 }
